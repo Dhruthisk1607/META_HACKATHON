@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+pydantic
+openenv
+openenv.core
+pandas
