@@ -9,17 +9,14 @@ class CSVDataCleanerAgent:
         else:
             self.df = None
 
-    
+    # ✅ For Hugging Face
     def clean(self, df):
         self.df = df.copy()
-
-        # Basic cleaning
         self.df = self.df.drop_duplicates()
         self.df = self.df.fillna(0)
-
         return self.df
 
-    
+    # ✅ For OpenEnv
     def take_action(self, action: str):
         action = action.lower().strip()
         self.actions_taken.append(action)
@@ -33,10 +30,33 @@ class CSVDataCleanerAgent:
         elif action == "remove duplicates":
             self.df = self.df.drop_duplicates()
 
+        elif action.startswith("strip column"):
+            col = action.replace("strip column", "").strip()
+            if col in self.df.columns:
+                self.df[col] = self.df[col].astype(str).str.strip()
+
+        elif action.startswith("lowercase column"):
+            col = action.replace("lowercase column", "").strip()
+            if col in self.df.columns:
+                self.df[col] = self.df[col].astype(str).str.lower()
+
+        elif action.startswith("fill with mean column"):
+            col = action.replace("fill with mean column", "").strip()
+            if col in self.df.columns:
+                self.df[col] = self.df[col].fillna(self.df[col].mean())
+
+        elif action.startswith("fill with median column"):
+            col = action.replace("fill with median column", "").strip()
+            if col in self.df.columns:
+                self.df[col] = self.df[col].fillna(self.df[col].median())
+
         elif action.startswith("drop column"):
             col = action.replace("drop column", "").strip()
             if col in self.df.columns:
                 self.df = self.df.drop(columns=[col])
+
+        else:
+            raise ValueError(f"Unknown action: {action}")
 
     def get_state(self):
         return {
