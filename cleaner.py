@@ -9,7 +9,7 @@ class CSVDataCleanerAgent:
         else:
             self.df = None
 
-    # 🔹 Used in Hugging Face
+    
     def clean(self, df):
         self.df = df.copy()
 
@@ -19,7 +19,7 @@ class CSVDataCleanerAgent:
 
         return self.df
 
-    # 🔹 Used in environment.py
+    
     def take_action(self, action: str):
         action = action.lower().strip()
         self.actions_taken.append(action)
