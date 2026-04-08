@@ -9,14 +9,14 @@ class CSVDataCleanerAgent:
         else:
             self.df = None
 
-    # ✅ For Hugging Face
+    
     def clean(self, df):
         self.df = df.copy()
         self.df = self.df.drop_duplicates()
         self.df = self.df.fillna(0)
         return self.df
 
-    # ✅ For OpenEnv
+
     def take_action(self, action: str):
         action = action.lower().strip()
         self.actions_taken.append(action)
