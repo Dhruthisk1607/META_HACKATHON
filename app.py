@@ -1,27 +1,12 @@
 import gradio as gr
 import pandas as pd
-from environment import CSVCleanerEnvironment
+from cleaner import CSVDataCleanerAgent
 
 def run_cleaner(file):
-    # Load CSV
     df = pd.read_csv(file.name)
 
-    # Initialize environment
-    env = CSVCleanerEnvironment()
-
-    # Start process
-    env.reset()
-    
-    # Example step loop (adjust based on your logic)
-    done = False
-    state = None
-
-    while not done:
-        action = env.cleaner.act(state)
-        state, reward, done, info = env.step(action)
-
-    # Assuming final cleaned dataframe stored
-    cleaned_df = env.cleaner.dataframe
+    cleaner = CSVDataCleanerAgent()
+    cleaned_df = cleaner.clean(df)
 
     return cleaned_df
 
