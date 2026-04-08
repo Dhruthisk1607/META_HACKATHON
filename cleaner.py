@@ -1,18 +1,51 @@
 import pandas as pd
 
 class CSVDataCleanerAgent:
-    def __init__(self):
-        self.df = None
+    def __init__(self, file_path=None):
         self.actions_taken = []
 
+        if file_path:
+            self.df = pd.read_csv(file_path)
+        else:
+            self.df = None
+
+    # 🔹 Used in Hugging Face
     def clean(self, df):
-        """Simple automatic cleaning (safe for Hugging Face)"""
         self.df = df.copy()
 
-        # Remove duplicates
+        # Basic cleaning
         self.df = self.df.drop_duplicates()
-
-        # Fill nulls with 0
         self.df = self.df.fillna(0)
 
         return self.df
+
+    # 🔹 Used in environment.py
+    def take_action(self, action: str):
+        action = action.lower().strip()
+        self.actions_taken.append(action)
+
+        if action == "drop nulls":
+            self.df = self.df.dropna()
+
+        elif action == "fill nulls":
+            self.df = self.df.fillna(0)
+
+        elif action == "remove duplicates":
+            self.df = self.df.drop_duplicates()
+
+        elif action.startswith("drop column"):
+            col = action.replace("drop column", "").strip()
+            if col in self.df.columns:
+                self.df = self.df.drop(columns=[col])
+
+    def get_state(self):
+        return {
+            "rows": len(self.df),
+            "columns": list(self.df.columns),
+            "null_values": self.df.isnull().sum().to_dict(),
+            "duplicates": self.df.duplicated().sum(),
+            "actions_taken": self.actions_taken
+        }
+
+    def is_clean(self):
+        return self.df.isnull().sum().sum() == 0 and self.df.duplicated().sum() == 0
