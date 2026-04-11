@@ -1,71 +1,100 @@
-import pandas as pd
+print(" FILE IS RUNNING")
 
-class CSVDataCleanerAgent:
-    def __init__(self, file_path=None):
-        self.actions_taken = []
-
-        if file_path:
-            self.df = pd.read_csv(file_path)
-        else:
-            self.df = None
-
-    
-    def clean(self, df):
-        self.df = df.copy()
-        self.df = self.df.drop_duplicates()
-        self.df = self.df.fillna(0)
-        return self.df
+import uuid
+import uvicorn
+from openenv.core.env_server import Environment, create_fastapi_app
+from models import CleanerAction, CleanerObservation, CleanerState
+from cleaner import CSVDataCleanerAgent
 
 
-    def take_action(self, action: str):
-        action = action.lower().strip()
-        self.actions_taken.append(action)
+class CSVCleanerEnvironment(Environment):
+    def __init__(self):
+        super().__init__()
+        self.cleaner = None
+        self.episode_id = ""
+        self.step_count = 0
 
-        if action == "drop nulls":
-            self.df = self.df.dropna()
+    def reset(self, **kwargs) -> CleanerObservation:
+        print("RESET CALLED")
 
-        elif action == "fill nulls":
-            self.df = self.df.fillna(0)
+        self.episode_id = str(uuid.uuid4())
+        self.step_count = 0
 
-        elif action == "remove duplicates":
-            self.df = self.df.drop_duplicates()
+        try:
+            file_path = kwargs.get("file_path", "messy_data.csv")
+            self.cleaner = CSVDataCleanerAgent(file_path)
 
-        elif action.startswith("strip column"):
-            col = action.replace("strip column", "").strip()
-            if col in self.df.columns:
-                self.df[col] = self.df[col].astype(str).str.strip()
+            state_data = self.cleaner.get_state()
 
-        elif action.startswith("lowercase column"):
-            col = action.replace("lowercase column", "").strip()
-            if col in self.df.columns:
-                self.df[col] = self.df[col].astype(str).str.lower()
+            return CleanerObservation(
+                observation={
+                    "status": "ready",
+                    "data": state_data
+                },
+                done=False
+            )
 
-        elif action.startswith("fill with mean column"):
-            col = action.replace("fill with mean column", "").strip()
-            if col in self.df.columns:
-                self.df[col] = self.df[col].fillna(self.df[col].mean())
+        except Exception as e:
+            print(" RESET ERROR:", e)
+            return CleanerObservation(
+                observation={"status": "error", "data": {}},
+                message=str(e),
+                done=True
+            )
 
-        elif action.startswith("fill with median column"):
-            col = action.replace("fill with median column", "").strip()
-            if col in self.df.columns:
-                self.df[col] = self.df[col].fillna(self.df[col].median())
+    def step(self, action: CleanerAction) -> CleanerObservation:
+        print(" STEP CALLED:", action.action)
 
-        elif action.startswith("drop column"):
-            col = action.replace("drop column", "").strip()
-            if col in self.df.columns:
-                self.df = self.df.drop(columns=[col])
+        try:
+            self.step_count += 1
 
-        else:
-            raise ValueError(f"Unknown action: {action}")
+           
+            self.cleaner.take_action(action.action)
 
-    def get_state(self):
-        return {
-            "rows": len(self.df),
-            "columns": list(self.df.columns),
-            "null_values": self.df.isnull().sum().to_dict(),
-            "duplicates": self.df.duplicated().sum(),
-            "actions_taken": self.actions_taken
-        }
+            state = self.cleaner.get_state()
+            done = self.cleaner.is_clean() or self.step_count >= 30
 
-    def is_clean(self):
-        return self.df.isnull().sum().sum() == 0 and self.df.duplicated().sum() == 0
+            return CleanerObservation(
+                observation={
+                    "status": "updated",
+                    "data": state
+                },
+                message=f"Action: {action.action}",
+                done=done
+            )
+
+        except Exception as e:
+            print("❌ STEP ERROR:", e)
+            return CleanerObservation(
+                observation={"status": "error", "data": {}},
+                message=str(e),
+                done=True
+            )
+
+    @property
+    def state(self) -> CleanerState:
+        return CleanerState(
+            episode_id=self.episode_id,
+            step_count=self.step_count
+        )
+
+
+
+def create_env():
+    return CSVCleanerEnvironment()
+
+
+
+app = create_fastapi_app(
+    create_env,
+    CleanerAction,
+    CleanerObservation
+)
+
+
+
+if __name__ == "__main__":
+    print("\n STARTING SERVER...")
+    print(" Open: http://127.0.0.1:8000/docs\n")
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
