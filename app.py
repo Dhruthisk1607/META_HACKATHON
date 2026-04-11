@@ -1,20 +1,38 @@
-import gradio as gr
+from fastapi import FastAPI
 import pandas as pd
 from cleaner import CSVDataCleanerAgent
 
-def run_cleaner(file):
-    df = pd.read_csv(file.name)
+app = FastAPI()
 
-    cleaner = CSVDataCleanerAgent()
-    cleaned_df = cleaner.clean(df)
+cleaner = None
 
-    return cleaned_df
 
-interface = gr.Interface(
-    fn=run_cleaner,
-    inputs=gr.File(label="Upload CSV"),
-    outputs="dataframe",
-    title="CSV Cleaner Agent"
-)
+@app.get("/")
+def home():
+    return {"message": "CSV Cleaner API running"}
 
-interface.launch()
+
+@app.post("/reset")
+def reset():
+    global cleaner
+    cleaner = CSVDataCleanerAgent("messy_data.csv")
+    return {"status": "reset done"}
+
+
+@app.post("/step")
+def step(action: dict):
+    global cleaner
+
+    if action["action_type"] == "show_head":
+        return cleaner.show_head()
+
+    if action["action_type"] == "remove_nulls":
+        return cleaner.remove_nulls()
+
+    if action["action_type"] == "drop_duplicates":
+        return cleaner.drop_duplicates()
+
+    if action["action_type"] == "get_info":
+        return cleaner.get_info()
+
+    return {"error": "invalid action"}
