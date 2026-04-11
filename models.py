@@ -1,13 +1,7 @@
-from openenv.core.env_server import Action, Observation, State
+from pydantic import BaseModel
+from typing import Dict, Any
 
-class CleanerAction(Action):
-    action: str
 
-class CleanerObservation(Observation):
-    state: dict
-    message: str = ""
-    done: bool = False
-
-class CleanerState(State):
-    episode_id: str = ""
-    step_count: int = 0
+class CleanerAction(BaseModel):
+    action_type: str
+    parameters: Dict[str, Any] = {}
