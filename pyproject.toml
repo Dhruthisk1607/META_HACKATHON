@@ -1,7 +1,7 @@
 [project]
 name = "csv-data-cleaner"
 version = "0.1.0"
-description = "OpenEnv CSV Cleaner"
+description = "OpenEnv CSV Cleaner Agent"
 
 dependencies = [
     "fastapi",
@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-server = "server.app:app"
+server = "server.app:main"
 
 [build-system]
 requires = ["setuptools"]
