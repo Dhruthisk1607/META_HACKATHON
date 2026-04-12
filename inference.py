@@ -1,35 +1,58 @@
-from environment import CSVCleanerEnvironment
-from models import CleanerAction
+import os
+import requests
 
-def run():
-    env = CSVCleanerEnvironment()
+API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:7860")
 
-    # Reset environment
-    obs = env.reset(file_path="messy_data.csv")
-    print("Initial Observation:", obs)
+
+def predict():
+    # =========================
+    # RESET EPISODE
+    # =========================
+    reset_response = requests.post(f"{API_BASE_URL}/reset")
+    reset_data = reset_response.json()
 
     done = False
+    obs = None
 
-    # Example actions (you can change)
+    # =========================
+    # ACTION SEQUENCE (TASKS)
+    # =========================
     actions = [
-        "fill nulls",
-        "remove duplicates"
+        {"action_type": "show_head", "parameters": {}},
+        {"action_type": "remove_nulls", "parameters": {}},
+        {"action_type": "drop_duplicates", "parameters": {}},
+        {"action_type": "get_info", "parameters": {}}
     ]
 
-    for act in actions:
+    # =========================
+    # STEP LOOP
+    # =========================
+    for action in actions:
         if done:
             break
 
-        action = CleanerAction(action=act)
-        obs = env.step(action)
+        response = requests.post(
+            f"{API_BASE_URL}/step",
+            json=action
+        )
 
-        print("\nAction:", act)
-        print("Observation:", obs)
+        data = response.json()
 
-        done = obs.done
+        obs = data["observation"]
+        done = data["done"]
 
-    return obs
+    # =========================
+    # OUTPUT FORMAT (EVALUATOR SAFE)
+    # =========================
+    return {
+        "observation": obs,
+        "done": done
+    }
 
 
+# =========================
+# OPTIONAL LOCAL TEST
+# =========================
 if __name__ == "__main__":
-    run()
+    result = predict()
+    print(result)
