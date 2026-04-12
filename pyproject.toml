@@ -1,15 +1,19 @@
 [project]
 name = "csv-data-cleaner"
 version = "0.1.0"
-description = "OpenEnv CSV Cleaner Agent"
+description = "OpenEnv CSV Cleaner"
 
 dependencies = [
     "fastapi",
     "uvicorn",
     "pandas",
     "pydantic",
-    "requests"
+    "requests",
+    "openenv-core>=0.2.0"
 ]
+
+[project.scripts]
+server = "server.app:app"
 
 [build-system]
 requires = ["setuptools"]
