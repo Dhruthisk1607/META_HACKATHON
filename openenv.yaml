@@ -3,4 +3,4 @@ description: OpenEnv for cleaning messy CSV data using natural language actions
 version: 0.1.0
 type: step-reset
 runtime: python
-entrypoint: environment:CSVCleanerEnvironment
+entrypoint: environment:app
