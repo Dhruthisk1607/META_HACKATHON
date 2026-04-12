@@ -5,11 +5,17 @@ API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:7860")
 
 
 def predict():
+    print("[START] Inference started")
+
     # =========================
     # RESET EPISODE
     # =========================
+    print("[STEP] Calling reset")
+
     reset_response = requests.post(f"{API_BASE_URL}/reset")
     reset_data = reset_response.json()
+
+    print("[STEP] Reset successful")
 
     done = False
     obs = None
@@ -31,6 +37,8 @@ def predict():
         if done:
             break
 
+        print(f"[STEP] Executing action: {action['action_type']}")
+
         response = requests.post(
             f"{API_BASE_URL}/step",
             json=action
@@ -41,9 +49,13 @@ def predict():
         obs = data["observation"]
         done = data["done"]
 
+        print(f"[STEP] Result: {obs['status']}")
+
     # =========================
-    # OUTPUT FORMAT (EVALUATOR SAFE)
+    # END
     # =========================
+    print("[END] Inference completed")
+
     return {
         "observation": obs,
         "done": done
@@ -51,7 +63,7 @@ def predict():
 
 
 # =========================
-# OPTIONAL LOCAL TEST
+# LOCAL TEST
 # =========================
 if __name__ == "__main__":
     result = predict()
