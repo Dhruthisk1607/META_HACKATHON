@@ -1,16 +1,16 @@
-[build-system]
-requires = ["setuptools>=45", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "csv-data-cleaner"
 version = "0.1.0"
+description = "OpenEnv CSV Cleaner Agent"
+
 dependencies = [
-    "pandas",
-    "openenv-core[core]",
     "fastapi",
-    "uvicorn"
+    "uvicorn",
+    "pandas",
+    "pydantic",
+    "requests"
 ]
 
-[project.entry-points."openenv"]
-environment = "environment:CSVCleanerEnvironment"
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
