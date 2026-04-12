@@ -1,129 +1,144 @@
-from fastapi import FastAPI
 import uuid
-import os
+from fastapi import FastAPI
+from pydantic import BaseModel
+import pandas as pd
 
-from cleaner import CSVDataCleanerAgent
-from models import CleanerAction
-
+# ------------------------
+# FASTAPI APP
+# ------------------------
 app = FastAPI()
 
-# =========================
-# ENV VARIABLES (CHECKLIST)
-# =========================
-API_BASE_URL = os.getenv("API_BASE_URL", "")
-MODEL_NAME = os.getenv("MODEL_NAME", "")
-HF_TOKEN = os.getenv("HF_TOKEN", "")
+# ------------------------
+# GLOBAL STATE
+# ------------------------
+env_state = {
+    "df": None,
+    "episode_id": "",
+    "step_count": 0
+}
 
-# =========================
-# STATE
-# =========================
-cleaner = None
-step_count = 0
-episode_id = ""
+# ------------------------
+# MODELS
+# ------------------------
+class Action(BaseModel):
+    action_type: str
+    parameters: dict = {}
 
-
-# =========================
+# ------------------------
 # RESET
-# =========================
+# ------------------------
 @app.post("/reset")
 def reset():
-    global cleaner, step_count, episode_id
-
-    step_count = 0
-    episode_id = str(uuid.uuid4())
-
-    cleaner = CSVDataCleanerAgent("messy_data.csv")
-
-    return {
-        "observation": {
-            "status": "ready",
-            "episode_id": episode_id,
-            "message": "reset successful"
-        },
-        "done": False
-    }
-
-
-# =========================
-# STEP
-# =========================
-@app.post("/step")
-def step(action: CleanerAction):
-    global cleaner, step_count
-
     try:
-        if cleaner is None:
-            return {
-                "observation": {
-                    "status": "error",
-                    "data": "Call /reset first"
-                },
-                "reward": 0.0,
-                "done": True
-            }
+        df = pd.read_csv("messy_data.csv")
 
-        step_count += 1
-
-        if action.action_type == "remove_nulls":
-            result = cleaner.remove_nulls()
-
-        elif action.action_type == "drop_duplicates":
-            result = cleaner.drop_duplicates()
-
-        elif action.action_type == "show_head":
-            result = cleaner.show_head()
-
-        elif action.action_type == "get_info":
-            result = cleaner.get_info()
-
-        else:
-            result = f"Unknown action: {action.action_type}"
+        env_state["df"] = df
+        env_state["episode_id"] = str(uuid.uuid4())
+        env_state["step_count"] = 0
 
         return {
             "observation": {
                 "status": "success",
-                "data": result
+                "data": "Environment reset successful"
             },
-            "reward": 1.0,
+            "reward": 0,
             "done": False
         }
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-
         return {
             "observation": {
                 "status": "error",
                 "data": str(e)
             },
-            "reward": 0.0,
+            "reward": 0,
             "done": True
         }
 
+# ------------------------
+# STEP
+# ------------------------
+@app.post("/step")
+def step(action: Action):
+    try:
+        df = env_state["df"]
 
-# =========================
-# STATE (REQUIRED)
-# =========================
+        if df is None:
+            return {
+                "observation": {
+                    "status": "error",
+                    "data": "Environment not initialized. Call /reset first."
+                },
+                "reward": 0,
+                "done": True
+            }
+
+        action_type = action.action_type
+
+        # ---------------- ACTIONS ----------------
+
+        if action_type == "show_head":
+            data = df.head().to_dict()
+
+        elif action_type == "remove_nulls":
+            before = len(df)
+            df = df.dropna()
+            env_state["df"] = df
+            data = f"Removed {before - len(df)} null rows"
+
+        elif action_type == "drop_duplicates":
+            before = len(df)
+            df = df.drop_duplicates()
+            env_state["df"] = df
+            data = f"Removed {before - len(df)} duplicates"
+
+        elif action_type == "get_info":
+            data = str(df.info())
+
+        else:
+            return {
+                "observation": {
+                    "status": "error",
+                    "data": f"Unknown action: {action_type}"
+                },
+                "reward": 0,
+                "done": True
+            }
+
+        env_state["step_count"] += 1
+
+        return {
+            "observation": {
+                "status": "success",
+                "data": data
+            },
+            "reward": 1,
+            "done": False
+        }
+
+    except Exception as e:
+        return {
+            "observation": {
+                "status": "error",
+                "data": str(e)
+            },
+            "reward": 0,
+            "done": True
+        }
+
+# ------------------------
+# STATE
+# ------------------------
 @app.get("/state")
 def state():
     return {
-        "episode_id": episode_id,
-        "step_count": step_count
+        "episode_id": env_state["episode_id"],
+        "step_count": env_state["step_count"]
     }
 
-
-# =========================
-# HEALTH CHECK
-# =========================
+# ------------------------
+# ROOT (IMPORTANT FOR HF)
+# ------------------------
 @app.get("/")
 def home():
     return {"message": "CSV Cleaner API is running"}
-
-
-# =========================
-# RUN LOCALLY (BROWSER SUPPORT)
-# =========================
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=7860, reload=True)
