@@ -3,30 +3,23 @@ import pandas as pd
 
 class CSVDataCleanerAgent:
     def __init__(self, file_path):
-        self.original_df = pd.read_csv(file_path)
-        self.df = self.original_df.copy()
-
-    def reset(self):
-        self.df = self.original_df.copy()
-        return "Reset complete"
+        self.df = pd.read_csv(file_path)
 
     def remove_nulls(self):
         before = len(self.df)
-        self.df = self.df.dropna()
-        removed = before - len(self.df)
-        return {"removed_null_rows": removed}
+        self.df.dropna(inplace=True)
+        return f"Removed {before - len(self.df)} null rows"
 
     def drop_duplicates(self):
         before = len(self.df)
-        self.df = self.df.drop_duplicates()
-        removed = before - len(self.df)
-        return {"removed_duplicates": removed}
+        self.df.drop_duplicates(inplace=True)
+        return f"Removed {before - len(self.df)} duplicates"
 
     def show_head(self):
-        return self.df.head().to_dict(orient="records")
+        return self.df.head().to_dict()
 
     def get_info(self):
         return {
             "columns": list(self.df.columns),
-            "shape": list(self.df.shape)
+            "shape": self.df.shape
         }
