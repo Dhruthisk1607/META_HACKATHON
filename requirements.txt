@@ -1,2 +1,5 @@
-gradio
+fastapi
+uvicorn
 pandas
+pydantic
+requests
